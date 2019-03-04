@@ -9,8 +9,11 @@
 
 
 // ----- Custom Modules -----
+mod component;
 mod io;
+mod resource;
 mod simulation;
+mod system;
 // --------------------------
 
 
