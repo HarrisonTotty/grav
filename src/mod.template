@@ -1,0 +1,19 @@
+// {# A convenient template to define modules #}
+
+// {% if this.private_modules is defined %}
+// {% for mod in this.private_modules %}
+mod {{ mod }};
+// {% endfor %}
+// {% endif %}
+
+// {% if this.public_modules is defined %}
+// {% for mod in this.public_modules %}
+pub mod {{ mod }};
+// {% endfor %}
+// {% endif %}
+
+// {% if this.public_use is defined %}
+// {% for mod in this.public_use %}
+pub use {{ mod }};
+// {% endfor %}
+// {% endif %}

@@ -1,0 +1,43 @@
+# Example Simulation Configuration File
+# -------------------------------------
+
+# The boundary conditions of the universe.
+boundary:
+  min: -100
+  max: 100
+  type: "periodic"
+
+# The initial conditions of the simulation.
+initial:
+  # Each entry below corresponds to a particle.
+  - acc: 0 # Explicit Magnitude Notation
+    pos: # Random Magnitude Notation
+      min: -100
+      max: 100
+    vel: [0, 0] # Explicit Vector Notation
+    mass:
+      min: 1
+      max: 100
+    charge:
+      min: -1
+      max: 1
+  # A particle that doesn't specify a pos/vel/acc is assumed to have a
+  # zero-magnitude value for that property.
+  - pos:
+      min: -100
+      max: 100
+    mass:
+      min: 1
+      max: 100
+    charge:
+      min: -1
+      max: 1
+  - pos:
+      min: -100
+      max: 100
+    mass:
+      min: 1
+      max: 100
+    charge:
+      min: -1
+      max: 1

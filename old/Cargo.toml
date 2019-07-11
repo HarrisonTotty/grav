@@ -1,0 +1,49 @@
+[package]
+authors = ["Harrison Totty <harrisongtotty@gmail.com>"]
+description = 'A tui-based nbody simulation program written in rust.'
+edition = "2018"
+keywords = ["tui", "nbody", "simulation", "physics", "ecs"]
+name = "grav"
+publish = false
+readme = "README.md"
+version = "0.1.0"
+
+[dependencies.chrono]
+version = "0.4"
+
+[dependencies.clap]
+features = ["color"]
+version = "2.32.0"
+
+[dependencies.fern]
+version = "0.5.7"
+
+[dependencies.log]
+version = "0.4.6"
+
+[dependencies.nalgebra]
+version = "0.17.2"
+
+[dependencies.serde]
+features = ["derive"]
+version = "1.0"
+
+[dependencies.serde_derive]
+version = "1.0"
+
+[dependencies.serde_yaml]
+version = "0.8"
+
+[dependencies.shellexpand]
+version = "1.0"
+
+[dependencies.specs]
+version = "0.14.3"
+
+[dependencies.specs-derive]
+version = "0.4.0"
+
+[dependencies.cursive]
+default-features = false
+features = ['termion-backend']
+version = "0.10"

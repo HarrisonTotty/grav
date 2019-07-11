@@ -1,0 +1,48 @@
+# CLI Configuration
+# -----------------
+
+files:
+  - dst: "cli.rs"
+    desc: "Contains functions for handling CLI interactions."
+    # ----- Global Arguments -----
+    args:
+      - name: "log_file"
+        default: "grav.log"
+        env: "GRAV_LOG_FILE"
+        help: "Specifies the log file to write simulation events to."
+        long: "--log-file"
+        short: "-f"
+        value_name: "FILE"
+      - name: "log_level"
+        default: "info"
+        env: "GRAV_LOG_LEVEL"
+        help: "Specifies the logging level of the program."
+        long: "--log-level"
+        possible_values:
+          - "disabled"
+          - "error"
+          - "warning"
+          - "info"
+          - "debug"
+          - "trace"
+        short: "-l"
+        value_name: "LVL"
+      - name: "log_mode"
+        default: "append"
+        env: "GRAV_LOG_MODE"
+        help: "Specifies whether to append to, or overwrite, the specified log file."
+        long: "--log-mode"
+        possible_values:
+          - "append"
+          - "overwrite"
+        short: "-M"
+        value_name: "MODE"
+    # ----- Subcommands -----
+    subcommands:
+      - name: "run"
+        help: "Runs a new simulation with a specified configuration set."
+        args:
+          - name: "config"
+            help: "The simulation configuration file to execute."
+            required: true
+            value_name: "FILE"

@@ -1,0 +1,10 @@
+// {% if this.desc is defined %}
+// {% set doc_content = this.desc %}
+// {% elif this.doc_file is defined %}
+// {% set doc_content = read_file(this.doc_file) %}
+// {% endif %}
+// {% if doc_content is defined %}
+// {% for line in doc_content.splitlines() %}
+//! {{ line }}
+// {% endfor %}
+// {% endif %}
