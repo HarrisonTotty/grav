@@ -1,5 +1,4 @@
-// {% include 'doc.template' %}
-// {% do require('this.args', 'this.subcommands') %}
+//! Contains useful functions pertaining to setting-up and maintaining CLI arguments.
 
 /// Parses the command-line arguments passed to the program, returning a
 /// collection of matches.
@@ -16,81 +15,75 @@ pub fn get_arguments<'a>() -> clap::ArgMatches<'a> {
         .help_message("Displays help and usage information.")
         .version(crate_version!())
         .version_message("Displays version information.")
-        // {% for arg in this.args %}
-        .arg(clap::Arg::with_name("{{ arg.name }}")
-             // {% if arg.default is defined %}
-             .default_value("{{ arg.default }}")
-             // {% endif %}
-             // {% if arg.env is defined %}
-             .env("{{ arg.env }}")
-             // {% endif %}
-             .help("{{ arg.help }}")
-             // {% if arg.long is defined %}
-             .long("{{ arg.long }}")
-             // {% endif %}
-             // {% if arg.possible_values is defined %}
+        .arg(clap::Arg::with_name("data_dir")
+             .default_value("data")
+             .env("GRAV_DATA_DIR")
+             .help("Specifies the directory from which to load simulation data.")
+             .long("--data-dir")
+             .short("-d")
+             .value_name("DIR")
+        )
+        .arg(clap::Arg::with_name("log_file")
+             .default_value("grav.log")
+             .env("GRAV_LOG_FILE")
+             .help("Specifies the log file to write simulation events to.")
+             .long("--log-file")
+             .short("-f")
+             .value_name("FILE")
+        )
+        .arg(clap::Arg::with_name("log_level")
+             .default_value("info")
+             .env("GRAV_LOG_LEVEL")
+             .help("Specifies the logging level of the program.")
+             .long("--log-level")
              .possible_values(&[
-                 // {% for val in arg.possible_values %}
-                 "{{ val }}",
-                 // {% endfor %}
+                 "disabled",
+                 "error",
+                 "warning",
+                 "info",
+                 "debug",
+                 "trace"
              ])
-             // {% endif %}
-             // {% if arg.short is defined %}
-             .short("{{ arg.short }}")
-             // {% endif %}
-             // {% if arg.value_name is defined %}
-             .value_name("{{ arg.value_name }}")
-             // {% endif %}
+             .short("-l")
+             .value_name("LVL")
         )
-        // {% endfor %}
-        // {% for sub in this.subcommands %}
-        .subcommand(clap::SubCommand::with_name("{{ sub.name }}")
-                    .about("{{ sub.help }}")
-                    .help_message("Displays help and usage information.")
-                    // {% if sub.args is defined %}
-                    // {% for arg in sub.args %}
-                    .arg(clap::Arg::with_name("{{ arg.name }}")
-                         // {% if arg.default is defined %}
-                         .default_value("{{ arg.default }}")
-                         // {% endif %}
-                         // {% if arg.env is defined %}
-                         .env("{{ arg.env }}")
-                         // {% endif %}
-                         .help("{{ arg.help }}")
-                         // {% if arg.long is defined %}
-                         .long("{{ arg.long }}")
-                         // {% endif %}
-                         // {% if arg.possible_values is defined %}
-                         .possible_values(&[
-                             // {% for val in arg.possible_values %}
-                             "{{ val }}",
-                             // {% endfor %}
-                         ])
-                         // {% endif %}
-                         // {% if arg.required is defined and arg.required %}
-                         .required(true)
-                         // {% endif %}
-                         // {% if arg.short is defined %}
-                         .short("{{ arg.short }}")
-                         // {% endif %}
-                         // {% if arg.value_name is defined %}
-                         .value_name("{{ arg.value_name }}")
-                         // {% endif %}
-                    )
-                    // {% endfor %}
-                    // {% endif %}
-                    .settings(
-                        &[
-                            clap::AppSettings::ColoredHelp,
-                            clap::AppSettings::VersionlessSubcommands
-                        ]
-                    )
+        .arg(clap::Arg::with_name("log_mode")
+             .default_value("overwrite")
+             .env("GRAV_LOG_MODE")
+             .help("Specifies whether to append to, or overwrite, the specified log file.")
+             .long("--log-mode")
+             .possible_values(&[
+                 "append",
+                 "overwrite"
+             ])
+             .short("-m")
+             .value_name("MODE")
         )
-        // {% endfor %}
+        .arg(clap::Arg::with_name("output")
+             .default_value("output.yaml")
+             .env("GRAV_OUTPUT")
+             .help("Specifies the simulation output file.")
+             .long("--output")
+             .short("-o")
+             .value_name("FILE")
+        )
+        .arg(clap::Arg::with_name("steps")
+             .default_value("1000")
+             .env("GRAV_STEPS")
+             .help("Specifies the number of steps to simulate.")
+             .long("--steps")
+             .short("-s")
+             .validator( | val_str | {
+                 match val_str.parse::<u128>() {
+                     Ok(val) if val > 0 => Ok(()),
+                     _ => Err(String::from("Specified port is not a positive integer value."))
+                 }
+             })
+             .value_name("INT")
+        )
         .settings(
             &[
                 clap::AppSettings::ColoredHelp,
-                clap::AppSettings::SubcommandRequiredElseHelp,
                 clap::AppSettings::VersionlessSubcommands
             ]
         );

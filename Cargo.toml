@@ -1,15 +1,11 @@
 [package]
 authors     = ["Harrison Totty <harrisongtotty@gmail.com>"]
-description = "A TUI N-Body Simulation Program"
+description = "An abstract N-Body simulator"
 edition     = "2018"
 name        = "grav"
 publish     = false
 readme      = "README.md"
 version     = "0.1.0"
-
-[[bin]]
-name = "grav"
-path = "build/main.rs"
 
 [dependencies.chrono]
 version = "0.4"
@@ -21,5 +17,29 @@ version = "2.32.0"
 [dependencies.fern]
 version = "0.5.7"
 
+[dependencies.indicatif]
+version = "0.13.0"
+
 [dependencies.log]
 version = "0.4.6"
+
+[dependencies.rand]
+version = "0.7.2"
+
+[dependencies.serde]
+version = "1.0.99"
+
+[dependencies.serde_derive]
+version = "1.0.99"
+
+[dependencies.serde_yaml]
+version = "0.8.9"
+
+[dependencies.specs]
+version = "0.15.0"
+
+[dependencies.specs-derive]
+version = "0.4.0"
+
+[dependencies.yaml-rust]
+version = "0.4.3"

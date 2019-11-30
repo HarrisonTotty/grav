@@ -1,7 +1,7 @@
-// {% include 'doc.template' %}
+//! Contains useful functions pertaining to logging setup.
 
 /// Sets-up logging for the program.
-pub fn setup_logging(
+pub fn setup(
     log_file: &str,
     log_level: &str,
     log_mode: &str
@@ -32,6 +32,10 @@ pub fn setup_logging(
                .append(match log_mode {
                    "append" => true,
                    _        => false
+               })
+               .truncate(match log_mode {
+                   "append" => false,
+                   _        => true
                })
                .open(log_file)?
         )
