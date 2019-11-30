@@ -10,3 +10,7 @@ Cargo.lock
 **/*.rs.bk
 
 /build
+
+/test.log
+/output.yaml
+*.ipynb_checkpoints
