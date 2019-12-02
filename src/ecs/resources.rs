@@ -138,3 +138,34 @@ pub struct OutputFile(pub String);
 impl std::default::Default for OutputFile {
     fn default() -> Self { OutputFile(String::from("output.yaml")) }
 }
+
+
+/// Represents splitting settings.
+#[derive(Clone, Debug)]
+pub struct SplittingSettings {
+    /// The maximum lifetime an entity may be before it divides.
+    pub maximum_lifetime: u128,
+
+    /// The minimum lifetime an entity may be before it divides.
+    pub minimum_lifetime: u128,
+
+    /// The resulting particle pairs will be moved to this number multiplied by
+    /// the original particle's radius.
+    pub separation_multiplier: f64,
+
+    /// Multiplies the magnitude of the velocity vectors of the resulting
+    /// particles.
+    pub velocity_multiplier: f64
+}
+
+/// Implements `std::default::Default` for `SplittingSettings`.
+impl std::default::Default for SplittingSettings {
+    fn default() -> Self {
+        SplittingSettings {
+            maximum_lifetime: 1000,
+            minimum_lifetime: 100,
+            separation_multiplier: 2.0,
+            velocity_multiplier: 1.0
+        }
+    }
+}

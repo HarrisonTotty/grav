@@ -6,6 +6,20 @@ use crate::math::*;
 use crate::output::*;
 use specs::prelude::*;
 
+
+/// Clears/resets the collisions between all entities.
+pub struct ClearCollisions;
+impl<'a> System<'a> for ClearCollisions {
+    type SystemData = WriteStorage<'a, components::Collisions>;
+    fn run(&mut self, mut collisions: Self::SystemData) {
+        debug!("Clearing collisions...");
+        for c in (&mut collisions).join() {
+            c.0 = Vec::new();
+        }
+    }
+}
+
+
 /// Clears/resets the forces acting on all entities.
 pub struct ClearForces;
 impl<'a> System<'a> for ClearForces {
@@ -27,66 +41,71 @@ impl<'a> System<'a> for CollisionDetection {
         Entities<'a>,
         Read<'a, resources::CollisionLimits>,
         ReadStorage<'a, components::Dynamics>,
-        ReadStorage<'a, components::Orientation>,
         ReadStorage<'a, components::Physicality>,
-        WriteStorage<'a, components::Collision>
+        WriteStorage<'a, components::Collisions>
     );
-    fn run(&mut self, (entities, limits, dyns, ort, phys, mut collisions): Self::SystemData) {
+    fn run(&mut self, (entities, limits, dyns, phys, mut collisions): Self::SystemData) {
         debug!("Detecting collisions...");
-        for (i, (i_entity, i_dyns, _i_ort, i_phys)) in (&*entities, &dyns, &ort, &phys).join().enumerate() {
+        for (i, (i_entity, i_dyns, i_phys)) in (&*entities, &dyns, &phys).join().enumerate() {
             if i_phys.collisions_enabled {
-                for (j, (j_entity, j_dyns, _j_ort, j_phys)) in (&*entities, &dyns, &ort, &phys).join().enumerate() {
-                    if i != j && j_phys.collisions_enabled {
-                        trace!("DETECTING COLLISIONS: {:?} <-> {:?}", i_entity, j_entity);
-                        let dist = (j_dyns.position - i_dyns.position).magnitude();
-                        if dist < limits.maximum_detection_theshold {
-                            if dist < limits.minimum_detection_theshold {
-                                trace!("COLLISION: {:?} <-> {:?}", i_entity, j_entity);
-                                if let Err(_msg) = collisions.insert(i_entity, components::Collision(j_entity)) {
-                                    error!("Unable to assign collision to entity.");
-                                }
-                            } else {
-                                match (i_phys.shape, j_phys.shape) {
-                                    (Shape::Cuboid(_x1, _y1, _z1), Shape::Cuboid(_x2, _y2, _z2)) => {
-                                    },
-                                    (Shape::Cuboid(_x, _y, _z), Shape::Point) => {
-                                    },
-                                    (Shape::Cuboid(_x, _y, _z), Shape::Sphere(_r)) => {
-                                    },
-                                    (Shape::Sphere(_r), Shape::Cuboid(_x, _y, _z)) => {
-                                    },
-                                    (Shape::Sphere(r), Shape::Point) => {
-                                        if dist - r <= 0.0 {
-                                            trace!("COLLISION: {:?} <-> {:?}", i_entity, j_entity);
-                                            if let Err(_msg) = collisions.insert(i_entity, components::Collision(j_entity)) {
-                                                error!("Unable to assign collision to entity.");
-                                            }
-                                        }
-                                    },
-                                    (Shape::Sphere(r1), Shape::Sphere(r2)) => {
-                                        if dist - (r1 + r2) <= 0.0 {
-                                            trace!("COLLISION: {:?} <-> {:?}", i_entity, j_entity);
-                                            if let Err(_msg) = collisions.insert(i_entity, components::Collision(j_entity)) {
-                                                error!("Unable to assign collision to entity.");
-                                            }
-                                        }
-                                    },
-                                    (Shape::Point, Shape::Cuboid(_x, _y, _z)) => {
-                                    },
-                                    (Shape::Point, Shape::Point) => {
-                                        // Points only collide when they are on top of each other, which should
-                                        // be catched by `min_detection_theshold` above.
-                                    },
-                                    (Shape::Point, Shape::Sphere(r)) => {
-                                        if dist - r <= 0.0 {
-                                            trace!("COLLISION: {:?} <-> {:?}", i_entity, j_entity);
-                                            if let Err(_msg) = collisions.insert(i_entity, components::Collision(j_entity)) {
-                                                error!("Unable to assign collision to entity.");
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                for (j, (j_entity, j_dyns, j_phys)) in (&*entities, &dyns, &phys).join().enumerate() {
+                    if let Some(i_collisions) = collisions.get_mut(i_entity) {
+                        if i != j && j_phys.collisions_enabled && !i_collisions.0.contains(&j_entity) {
+                           trace!("DETECTING COLLISIONS: {:?} <-> {:?}", i_entity, j_entity);
+                           let dist = (j_dyns.position - i_dyns.position).magnitude();
+                           if dist < limits.maximum_detection_theshold {
+                               if dist < limits.minimum_detection_theshold {
+                                   trace!("THRESHOLD COLLISION: {:?} <-> {:?}", i_entity, j_entity);
+                                   i_collisions.0.push(j_entity);
+                                   if let Some(j_collisions) = collisions.get_mut(j_entity) {
+                                       j_collisions.0.push(i_entity);
+                                   }
+                               } else {
+                                   match (i_phys.shape, j_phys.shape) {
+                                       (Shape::Cuboid(_x1, _y1, _z1), Shape::Cuboid(_x2, _y2, _z2)) => {
+                                       },
+                                       (Shape::Cuboid(_x, _y, _z), Shape::Point) => {
+                                       },
+                                       (Shape::Cuboid(_x, _y, _z), Shape::Sphere(_r)) => {
+                                       },
+                                       (Shape::Sphere(_r), Shape::Cuboid(_x, _y, _z)) => {
+                                       },
+                                       (Shape::Sphere(r), Shape::Point) => {
+                                           if dist - r <= 0.0 {
+                                               trace!("SPHERE-POINT COLLISION: {:?} <-> {:?}", i_entity, j_entity);
+                                               i_collisions.0.push(j_entity);
+                                               if let Some(j_collisions) = collisions.get_mut(j_entity) {
+                                                   j_collisions.0.push(i_entity);
+                                               }
+                                           }
+                                       },
+                                       (Shape::Sphere(r1), Shape::Sphere(r2)) => {
+                                           if dist - (r1 + r2) <= 0.0 {
+                                               trace!("SPHERE-SPHERE COLLISION: {:?} <-> {:?}", i_entity, j_entity);
+                                               i_collisions.0.push(j_entity);
+                                               if let Some(j_collisions) = collisions.get_mut(j_entity) {
+                                                   j_collisions.0.push(i_entity);
+                                               }
+                                           }
+                                       },
+                                       (Shape::Point, Shape::Cuboid(_x, _y, _z)) => {
+                                       },
+                                       (Shape::Point, Shape::Point) => {
+                                           // Points only collide when they are on top of each other, which should
+                                           // be catched by `min_detection_theshold` above.
+                                       },
+                                       (Shape::Point, Shape::Sphere(r)) => {
+                                           if dist - r <= 0.0 {
+                                               trace!("POINT-SPHERE COLLISION: {:?} <-> {:?}", i_entity, j_entity);
+                                               i_collisions.0.push(j_entity);
+                                               if let Some(j_collisions) = collisions.get_mut(j_entity) {
+                                                   j_collisions.0.push(i_entity);
+                                               }
+                                           }
+                                       }
+                                   }
+                               }
+                           }
                         }
                     }
                 }
@@ -100,10 +119,77 @@ impl<'a> System<'a> for CollisionDetection {
 pub struct HandleCollisions;
 impl<'a> System<'a> for HandleCollisions {
     type SystemData = (
-        WriteStorage<'a, components::Collision>
+        Entities<'a>,
+        Read<'a, LazyUpdate>,
+        WriteStorage<'a, components::Charge>,
+        WriteStorage<'a, components::Collisions>,
+        WriteStorage<'a, components::Dynamics>,
+        WriteStorage<'a, components::Mass>,
+        WriteStorage<'a, components::Physicality>
     );
-    fn run(&mut self, _data: Self::SystemData) {
+    fn run(&mut self, (entities, lazy_updater, mut all_charges, mut all_collisions, mut all_dynamics, mut all_masses, mut all_physicality): Self::SystemData) {
         debug!("Handling collisions...");
+        for entity in (&*entities).join() {
+            let collisions: Vec<Entity> = match all_collisions.get(entity) { Some(c) => c.0.clone(), _ => Vec::new() };
+            if collisions.len() > 0 {
+                let mut new_charge: f64 = match all_charges.get(entity) { Some(charge) => charge.0, _ => 0.0 };
+                let mut new_mass: f64 = match all_masses.get(entity) { Some(mass) => mass.0, _ => 0.0 };
+                let mut new_position: Vector = Vector::default();
+                let mut new_velocity: Vector = Vector::default();
+                let mut new_radius: f64 = 0.0;
+                if let Some(dynamics) = all_dynamics.get(entity) {
+                    new_position = dynamics.position;
+                    new_velocity = dynamics.velocity;
+                }
+                if let Some(physicality) = all_physicality.get(entity) {
+                    new_radius = match physicality.shape {
+                        Shape::Sphere(r) => r / 2.0,
+                        _ => 0.0
+                    };
+                }
+                for other_entity in &collisions {
+                    if let Some(other_charge) = all_charges.get(*other_entity) {
+                        new_charge += other_charge.0;
+                    }
+                    if let Some(other_dynamics) = all_dynamics.get(*other_entity) {
+                        new_position += (other_dynamics.position - new_position) / 2.0;
+                        new_velocity += other_dynamics.velocity;
+                    }
+                    if let Some(other_mass) = all_masses.get(*other_entity) {
+                        new_mass += other_mass.0;
+                    }
+                    if let Some(other_physicality) = all_physicality.get(*other_entity) {
+                        if let Shape::Sphere(r) = other_physicality.shape {
+                            new_radius += r / 2.0;
+                        }
+                    }
+                    all_collisions.remove(*other_entity);
+                    entities.delete(*other_entity).expect("Unable to delete other entity");
+                }
+                trace!("NEW CHARGE: {}", new_charge);
+                trace!("NEW MASS: {}", new_mass);
+                trace!("NEW POSITION: {:?}", new_position);
+                trace!("NEW RADIUS: {}", new_radius);
+                trace!("NEW VELOCITY: {:?}", new_velocity);
+                let new_entity = entities.create();
+                all_charges.insert(new_entity, components::Charge(new_charge)).expect("Unable to update charge");
+                lazy_updater.insert(new_entity, components::Collisions::default());
+                all_dynamics.insert(new_entity, components::Dynamics {
+                    acceleration: Vector::default(),
+                    position: new_position,
+                    velocity: new_velocity
+                }).expect("Unable to update dynamics");
+                lazy_updater.insert(new_entity, components::Forces::default());
+                lazy_updater.insert(new_entity, components::Lifetime::default());
+                all_masses.insert(new_entity, components::Mass(new_mass)).expect("Unable to update mass");
+                all_physicality.insert(new_entity, components::Physicality {
+                    collisions_enabled: true,
+                    shape: Shape::Sphere(new_radius)
+                }).expect("Unable to update physicality");
+                all_collisions.remove(entity);
+                entities.delete(entity).expect("Unable to delete entity");
+            }
+        }
     }
 }
 
@@ -150,6 +236,7 @@ impl<'a> System<'a> for HandleDynamics {
                 obj.position *= limits.minimum_position / pos_mag;
             } else if pos_mag > limits.maximum_position {
                 obj.position *= limits.maximum_position / pos_mag;
+                obj.velocity = (-obj.velocity / 2.0);
             }
             trace!(
                 "NEW DYNAMICS: [{:?}, {:?}, {:?}]",
@@ -311,27 +398,124 @@ impl<'a> System<'a> for HandleOrientation {
 }
 
 
+/// Handles the splitting of particles into two.
+pub struct HandleSplitting;
+impl<'a> System<'a> for HandleSplitting {
+    type SystemData = (
+        Entities<'a>,
+        Read<'a, LazyUpdate>,
+        Read<'a, resources::SplittingSettings>,
+        ReadStorage<'a, components::Lifetime>,
+        WriteStorage<'a, components::Charge>,
+        WriteStorage<'a, components::Dynamics>,
+        WriteStorage<'a, components::Mass>,
+        WriteStorage<'a, components::Physicality>
+    );
+    fn run(&mut self, (entities, lazy_updater, settings, lifetimes, mut all_charges, mut all_dynamics, mut all_masses, mut all_physicality): Self::SystemData) {
+        debug!("Handling entity splitting...");
+        for (entity, lifetime) in (&*entities, &lifetimes).join() {
+            let mass: f64 = match all_masses.get(entity) { Some(m) => m.0, _ => 1.0 };
+            let mut radius: f64 = 1.0;
+            if let Some(physicality) = all_physicality.get(entity) {
+                radius = match physicality.shape {
+                    Shape::Sphere(r) => r,
+                    _ => 1.0
+                };
+            }
+            let mut split_factor: f64 = settings.maximum_lifetime as f64;
+            if mass >= 10.0 {
+                split_factor /= (mass / 10.0).floor();
+            } else if mass <= -10.0 {
+                split_factor /= (-mass / 10.0).floor();
+            }
+            if lifetime.0 > settings.minimum_lifetime && (lifetime.0 > settings.maximum_lifetime || (lifetime.0 as f64) > split_factor) {
+                // Get the original component values.
+                let charge: f64 = match all_charges.get(entity) { Some(c) => c.0, _ => 0.0 };
+                let mut position = Vector::default();
+                let mut velocity = Vector::default();
+                if let Some(dynamics) = all_dynamics.get(entity) {
+                    position = dynamics.position;
+                    velocity = dynamics.velocity;
+                }
+                // Setup the two new particles.
+                let p1 = entities.create();
+                let p2 = entities.create();
+                if charge == 0.0 {
+                    all_charges.insert(p1, components::Charge(-1.0)).expect("Unable to set charge");
+                    all_charges.insert(p2, components::Charge(1.0)).expect("Unable to set charge");
+                } else {
+                    all_charges.insert(p1, components::Charge((charge / 2.0).floor())).expect("Unable to set charge");
+                    all_charges.insert(p2, components::Charge((charge / 2.0).ceil())).expect("Unable to set charge");
+                }
+                all_masses.insert(p1, components::Mass(mass / 2.0)).expect("Unable to set mass");
+                all_masses.insert(p2, components::Mass(mass / 2.0)).expect("Unable to set mass");
+                all_dynamics.insert(p1, components::Dynamics {
+                    acceleration: Vector::default(),
+                    position: position + (settings.separation_multiplier * radius),
+                    velocity: velocity * settings.velocity_multiplier
+                }).expect("Unable to set dynamics.");
+                all_dynamics.insert(p2, components::Dynamics {
+                    acceleration: Vector::default(),
+                    position: position - (settings.separation_multiplier * radius),
+                    velocity: -(velocity * settings.velocity_multiplier)
+                }).expect("Unable to set dynamics.");
+                all_physicality.insert(p1, components::Physicality {
+                    collisions_enabled: true,
+                    shape: Shape::Sphere(radius)
+                }).expect("Unable to set physicality");
+                all_physicality.insert(p2, components::Physicality {
+                    collisions_enabled: true,
+                    shape: Shape::Sphere(radius)
+                }).expect("Unable to set physicality");
+                lazy_updater.insert(p1, components::Collisions::default());
+                lazy_updater.insert(p2, components::Collisions::default());
+                lazy_updater.insert(p1, components::Forces::default());
+                lazy_updater.insert(p2, components::Forces::default());
+                lazy_updater.insert(p1, components::Lifetime::default());
+                lazy_updater.insert(p2, components::Lifetime::default());
+                entities.delete(entity).expect("Unable to delete entity");
+            }
+        }
+    }
+}
+
+
+/// Updates the lifetime of all entities.
+pub struct UpdateLifetimes;
+impl<'a> System<'a> for UpdateLifetimes {
+    type SystemData = WriteStorage<'a, components::Lifetime>;
+    fn run(&mut self, mut lifetimes: Self::SystemData) {
+        debug!("Updating entity lifetimes...");
+        for lifetime in (&mut lifetimes).join() {
+            lifetime.0 += 1;
+        }
+    }
+}
+
+
 /// Writes simulation data to the specified output file.
 pub struct WriteOutput;
 impl<'a> System<'a> for WriteOutput {
     type SystemData = (
         Read<'a, resources::OutputFile>,
+        ReadStorage<'a, components::Charge>,
         ReadStorage<'a, components::Dynamics>,
         ReadStorage<'a, components::Mass>
     );
-    fn run(&mut self, (output_file, dynamics, masses): Self::SystemData) {
+    fn run(&mut self, (output_file, charges, dynamics, masses): Self::SystemData) {
         use std::io::Write;
         debug!("Writing output...");
         let mut output_entities: Vec<OutputEntity> = Vec::new();
-        for (i_dynamics, i_mass) in (&dynamics, &masses).join() {
-            output_entities.push(
-                OutputEntity {
-                    acceleration: i_dynamics.acceleration,
-                    mass: i_mass.0,
-                    position: i_dynamics.position,
-                    velocity: i_dynamics.velocity
-                }
-            )
+        for (i_charge, i_dynamics, i_mass) in (&charges, &dynamics, &masses).join() {
+            let oe = OutputEntity {
+                acceleration: i_dynamics.acceleration,
+                charge: i_charge.0,
+                mass: i_mass.0,
+                position: i_dynamics.position,
+                velocity: i_dynamics.velocity
+            };
+            trace!("OUTPUT ENTITY: {:?}", oe);
+            output_entities.push(oe);
         }
         let entry = OutputEntry {
             step: 0,

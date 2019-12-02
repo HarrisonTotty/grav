@@ -6,27 +6,29 @@ use specs::prelude::*;
 
 /// Populates the world with the specified set of entities.
 pub fn populate_entities(world: &mut specs::World, num_entities: u32) {
-    use rand::Rng;
-    let mut rng = rand::thread_rng();
-    for _i in 0..num_entities {
-        let charge_bool: bool = rng.gen();
+    //use rand::Rng;
+    //let mut rng = rand::thread_rng();
+    for i in 0..num_entities {
         world.create_entity()
-            .with(Charge(match charge_bool {
-                true => 1.0,
-                _ => -1.0
+            .with(Charge(match i % 3 {
+                0 => 0.0,
+                1 => -1.0,
+                _ => 1.0
             }))
+            .with(Collisions::default())
             .with(
                 Dynamics {
                     acceleration: Vector::default(),
-                    position: Vector::random(0.0, 100.0),
+                    position: Vector::random(1.0, 100.0),
                     velocity: Vector::random(0.0, 10.0)
                 }
             )
             .with(Forces::default())
-            .with(Mass(rng.gen_range(1.0, 10.0)))
+            .with(Lifetime::default())
+            .with(Mass(1.0))
             .with(Physicality {
                 collisions_enabled: true,
-                shape: Shape::Sphere(rng.gen_range(0.1, 1.0))
+                shape: Shape::Sphere(1.0)
             })
             .build();
     }

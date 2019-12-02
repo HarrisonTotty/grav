@@ -18,6 +18,9 @@ pub struct OutputEntity {
     /// The current acceleration of this entity.
     pub acceleration: Vector,
 
+    /// The charge of the entity.
+    pub charge: f64,
+
     /// The mass of the entity.
     pub mass: f64,
 

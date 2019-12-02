@@ -23,10 +23,10 @@ pub struct Camera {
 pub struct Charge(pub f64);
 
 
-/// Represents a collision reference to another entity.
-#[derive(Clone, Component, Debug)]
+/// Represents collision references to other entities.
+#[derive(Clone, Component, Debug, Default)]
 #[storage(VecStorage)]
-pub struct Collision(pub Entity);
+pub struct Collisions(pub Vec<Entity>);
 
 
 /// Represent the "description" component. All objects with this component
@@ -64,6 +64,13 @@ pub struct Dynamics {
 #[derive(Clone, Component, Debug, Default)]
 #[storage(VecStorage)]
 pub struct Forces(pub HashMap<String, Vector>);
+
+
+/// Represents the "lifetime" of an entity, which is the number of steps this
+/// entity has existed.
+#[derive(Clone, Component, Debug, Default)]
+#[storage(VecStorage)]
+pub struct Lifetime(pub u128);
 
 
 /// Represents the "mass" component.

@@ -38,16 +38,22 @@ fn main() {
 
     info!("Registering components...");
     world.register::<ecs::components::Charge>();
+    world.register::<ecs::components::Collisions>();
     world.register::<ecs::components::Dynamics>();
     world.register::<ecs::components::Forces>();
+    world.register::<ecs::components::Lifetime>();
     world.register::<ecs::components::Mass>();
     world.register::<ecs::components::Physicality>();
 
     info!("Instantiating resources...");
+    world.insert(CollisionLimits {
+        maximum_detection_theshold: 100.0,
+        minimum_detection_theshold: 1.0
+    });
     world.insert(DeltaTime(0.5));
     world.insert(
         DynamicsLimits {
-            maximum_acceleration: 2.0,
+            maximum_acceleration: 5.0,
             maximum_position: 100.0,
             maximum_velocity: 10.0,
             minimum_acceleration: 0.0,
@@ -55,15 +61,36 @@ fn main() {
             minimum_velocity: 0.0
         }
     );
-    world.insert(ElectrostaticConstant(1.0));
-    world.insert(GravitationalConstant::default());
+    world.insert(ElectrostaticConstant(0.5));
+    world.insert(GravitationalConstant(1.0));
     world.insert(OutputFile(args.value_of("output").unwrap().to_string()));
+    world.insert(SplittingSettings {
+        maximum_lifetime: 400,
+        minimum_lifetime: 100,
+        separation_multiplier: 1.0,
+        velocity_multiplier: 1.0
+    });
 
     info!("Building dispatcher...");
     let mut dispatcher = DispatcherBuilder::new()
         .with(
+            ClearCollisions,
+            "clear_collisions",
+            &[]
+        )
+        .with(
             ClearForces,
             "clear_forces",
+            &[]
+        )
+        .with(
+            WriteOutput,
+            "write_output",
+            &[]
+        )
+        .with(
+            UpdateLifetimes,
+            "update_lifetimes",
             &[]
         )
         .with(
@@ -86,21 +113,26 @@ fn main() {
             "handle_dynamics",
             &["handle_forces"]
         )
-        //.with(
-        //    CollisionDetection,
-        //    "collision_detection",
-        //    &["handle_dynamics"]
-        //)
         .with(
-            WriteOutput,
-            "write_output",
-            &["handle_dynamics"]
+            CollisionDetection,
+            "collision_detection",
+            &["clear_collisions", "handle_dynamics"]
+        )
+        .with(
+            HandleCollisions,
+            "handle_collisions",
+            &["collision_detection"]
+        )
+        .with(
+            HandleSplitting,
+            "handle_splitting",
+            &["handle_collisions", "update_lifetimes"]
         )
         .build();
 
     info!("Building entities...");
-    helper::populate_entities(&mut world, 300);
-
+    helper::populate_entities(&mut world, 1000);
+                              
     info!("Starting simulation...");
     let steps = args.value_of("steps").unwrap().parse::<u128>().unwrap();
     let pb = indicatif::ProgressBar::new(steps.try_into().unwrap());
@@ -111,7 +143,9 @@ fn main() {
     for step in 1..(steps + 1) {
         pb.inc(1);
         info!("Computing step {} of {}...", step, steps);
+        debug!("Number of entities: {}", (&world.entities()).join().count());
         dispatcher.dispatch(&mut world);
+        world.maintain();
     }
     pb.finish();
 }
